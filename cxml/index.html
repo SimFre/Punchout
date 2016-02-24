@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="utf-8">
+  <title>Punch Out Test</title>
+  <script type="text/javascript" src="sh_main.min.js"></script>
+  <script type="text/javascript" src="sh_xml.min.js"></script>
+  <link type="text/css" rel="stylesheet" href="sh_emacs.min.css" />
+ </head>
+
+ <body onload="sh_highlightDocument();">
+  <h2>Punch Out Test</h2>
+
+  <form name="pu" method="post" action="punch.php">
+   <br />Punchout URL:<br /><input type="text" name="PUNCHOUT_LOGIN_URL" style="width: 400px;" value="https://webshop-test.fishersci.com/insight2_ie/cxmlAuthentication.do" />
+   <br />Username:    <br /><input type="text" name="USERNAME" size="25" value="" />
+   <br />Password:    <br /><input type="text" name="PASSWORD" size="25" value="" />
+                      <br /><input type="submit" value="Go" />
+  </form>
+ </body>
+</html>

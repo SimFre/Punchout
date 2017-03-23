@@ -28,7 +28,7 @@ foreach ($_POST as $k => $val) {
 $out = array();
 foreach(array_values($keys) as $i) {
    foreach (array_values($params) as $key) {
-      if (isset($_POST[$key][$i]) {
+      if (isset($_POST[$key][$i])) {
         $out[$i][$key] = $_POST[$key][$i];
       }
    }

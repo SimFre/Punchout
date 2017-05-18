@@ -19,7 +19,7 @@
 
  <form name="pu" target="mid" method="post" action="#" onsubmit="return OnSubmitForm(this);">
   <input type="hidden" name="" value="" id="_buid" />
-  Punchout URL: <input type="text" id="PUNCHOUT_LOGIN_URL" size="35" value="https://webshop.fishersci.com/insight2_nl/punchoutAuthentication.do" />
+  Punchout URL: <input type="text" id="PUNCHOUT_LOGIN_URL" size="35" value="https://www.example.org/punchout.do" />
   Username:     <input type="text" name="USERNAME" size="25" value="" />
   Password:     <input type="text" name="PASSWORD" size="25" value="" />
                 <input type="text" name="_bun" size="35" value="BUYER_USERNAME" />:

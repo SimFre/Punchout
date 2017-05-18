@@ -10,9 +10,9 @@ if (!empty($_POST['inputXML'])) {
     $inputXML = $_POST['inputXML'];
 } else {
     $replaceHook = true;
-    $username = $_POST['USERNAME'];
-    $password = $_POST['PASSWORD'];
-    $setupURL = $_POST['PUNCHOUT_LOGIN_URL'];
+    $username = (isset($_POST['USERNAME']) ? $_POST['USERNAME'] : null);
+    $password = (isset($_POST['PASSWORD']) ? $_POST['PASSWORD'] : null);
+    $setupURL = (isset($_POST['PUNCHOUT_LOGIN_URL']) ? $_POST['PUNCHOUT_LOGIN_URL'] : null);
     $inputXML = <<<EOT
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.1.007/cXML.dtd">
@@ -57,48 +57,63 @@ EOT;
 }
 ?><?php //Trick to fool syntax higlighting
 
-$inputDoc = simplexml_load_string($inputXML);
-$setupURL = $inputDoc->Request->PunchOutSetupRequest->SupplierSetup->URL[0];
-if ($replaceHook) {
-    $inputDoc->Request->PunchOutSetupRequest->BrowserFormPost->URL[0] = $hook;
-    $inputXML = $inputDoc->asXML();
+$inputXML = trim($inputXML);
+try {
+    //$inputDoc = @simplexml_load_string($inputXML);
+    $inputDoc = new SimpleXMLElement($inputXML);
+    //if (is_null($inputDoc)) {
+    //    throw new Exception("Could not parse XML")
+    //}
+    $setupURL = $inputDoc->Request->PunchOutSetupRequest->SupplierSetup->URL[0];
+    if ($replaceHook) {
+        $inputDoc->Request->PunchOutSetupRequest->BrowserFormPost->URL[0] = $hook;
+        $inputXML = $inputDoc->asXML();
+    }
+
+    $ch = curl_init($setupURL);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: text/xml'));
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $inputXML);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    $outputXML = curl_exec($ch);
+    $outputDoc = new SimpleXMLElement($outputXML);
+    
+    $result = curl_getinfo($ch);
+    curl_close($ch);
+
+    $ok = false;
+    $url = "";
+    if ($result['http_code'] == 200) {
+       $ok = true;
+       $url = $outputDoc->Response[0]->PunchOutSetupResponse[0]->StartPage[0]->URL[0];
+    }
+
+    $dom = new DOMDocument();
+    $dom->loadXML($outputXML);
+    $dom->preserveWhiteSpace = false;
+    $dom->formatOutput = true;
+    $outputXML = $dom->saveXML();
+    unset($dom);
+
+    $dom = new DOMDocument();
+    $dom->loadXML($inputXML);
+    $dom->preserveWhiteSpace = false;
+    $dom->formatOutput = true;
+    $dom->normalizeDocument();
+    $inputXML = $dom->saveXML();
+    unset($dom);
+
+} catch (Exception $e) {
+    $exml = new SimpleXMLElement('<exception/>');
+    array_walk_recursive($e, array($exml, 'addChild'));
+    $outputXML = $xml->asXML();
 }
 
-$ch = curl_init($setupURL);
-curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
-curl_setopt($ch, CURLOPT_POST, 1);
-curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: text/xml'));
-curl_setopt($ch, CURLOPT_POSTFIELDS, $inputXML);
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-$outputXML = curl_exec($ch);
-$outputDoc = simplexml_load_string($outputXML);
-$result = curl_getinfo($ch);
-curl_close($ch);
 
-$ok = false;
-$url = "";
-if ($result['http_code'] == 200) {
-   $ok = true;
-   $url = $outputDoc->Response[0]->PunchOutSetupResponse[0]->StartPage[0]->URL[0];
-}
-
-$dom = new DOMDocument();
-$dom->loadXML($outputXML);
-$dom->preserveWhiteSpace = false;
-$dom->formatOutput = true;
-$outputXML = $dom->saveXML();
 $outputXML = htmlentities($outputXML);
-unset($dom);
-
-$dom = new DOMDocument();
-$dom->loadXML($inputXML);
-$dom->preserveWhiteSpace = false;
-$dom->formatOutput = true;
-$dom->normalizeDocument();
-$inputXML = $dom->saveXML();
 $inputXML = htmlentities($inputXML);
-unset($dom);
 
 ?><!doctype html>
 <html lang="en">

@@ -57,17 +57,13 @@ EOT;
 }
 ?><?php //Trick to fool syntax higlighting
 
-$inputXML = trim($inputXML);
+$postedXML = trim($inputXML);
 try {
-    //$inputDoc = @simplexml_load_string($inputXML);
-    $inputDoc = new SimpleXMLElement($inputXML);
-    //if (is_null($inputDoc)) {
-    //    throw new Exception("Could not parse XML")
-    //}
+    $inputDoc = new SimpleXMLElement($postedXML);
     $setupURL = $inputDoc->Request->PunchOutSetupRequest->SupplierSetup->URL[0];
     if ($replaceHook) {
         $inputDoc->Request->PunchOutSetupRequest->BrowserFormPost->URL[0] = $hook;
-        $inputXML = $inputDoc->asXML();
+        $postedXML = $inputDoc->asXML();
     }
 
     $ch = curl_init($setupURL);
@@ -75,45 +71,53 @@ try {
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: text/xml'));
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $inputXML);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $postedXML);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-    $outputXML = curl_exec($ch);
-    $outputDoc = new SimpleXMLElement($outputXML);
-    
+    $curlOutput = curl_exec($ch);
     $result = curl_getinfo($ch);
     curl_close($ch);
 
     $ok = false;
     $url = "";
-    if ($result['http_code'] == 200) {
-       $ok = true;
-       $url = $outputDoc->Response[0]->PunchOutSetupResponse[0]->StartPage[0]->URL[0];
+    if ($result["http_code"] >= 200 && $result["http_code"] <= 299) {
+        $ok = true;
+        $outputDoc = new SimpleXMLElement($curlOutput);
+        $url = $outputDoc->Response[0]->PunchOutSetupResponse[0]->StartPage[0]->URL[0];
+    } else {
+        throw new Exception($curlOutput, $result["http_code"]);
     }
 
     $dom = new DOMDocument();
-    $dom->loadXML($outputXML);
+    $dom->loadXML($curlOutput);
     $dom->preserveWhiteSpace = false;
     $dom->formatOutput = true;
     $outputXML = $dom->saveXML();
     unset($dom);
 
     $dom = new DOMDocument();
-    $dom->loadXML($inputXML);
+    $dom->loadXML($postedXML);
     $dom->preserveWhiteSpace = false;
     $dom->formatOutput = true;
     $dom->normalizeDocument();
-    $inputXML = $dom->saveXML();
+    $postedXML = $dom->saveXML();
     unset($dom);
 
 } catch (Exception $e) {
-    $exml = new SimpleXMLElement('<exception/>');
-    array_walk_recursive($e, array($exml, 'addChild'));
-    $outputXML = $xml->asXML();
+    $dom = new DOMDocument();
+    $dom->appendChild($dom->createElement("message", $e->getMessage()));
+    $dom->appendChild($dom->createElement("code",    $e->getCode()));
+    //$dom->appendChild($dom->createElement("file",    $e->getFile()));
+    //$dom->appendChild($dom->createElement("line",    $e->getLine()));
+    $dom->preserveWhiteSpace = false;
+    $dom->formatOutput = true;
+    $dom->normalizeDocument();
+    $outputXML = $dom->saveXML();
 }
 
 
 $outputXML = htmlentities($outputXML);
 $inputXML = htmlentities($inputXML);
+$postedXML = htmlentities($postedXML);
 
 ?><!doctype html>
 <html lang="en">
@@ -136,6 +140,9 @@ $inputXML = htmlentities($inputXML);
   <h2>XML Response:</h2>
   <pre class="sh_xml"><?= $outputXML ?></pre>
 
+  <h2>XML Post:</h2>
+  <pre class="sh_xml"><?= $inputXML ?></pre>
+
   <h2>XML Input:</h2>
   <pre class="sh_xml"><?= $inputXML ?></pre>
 
@@ -147,4 +154,4 @@ $inputXML = htmlentities($inputXML);
 
 
  </body>
-</html>
+</html><

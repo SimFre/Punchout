@@ -1,12 +1,19 @@
 <?php
 $payload = uniqid();
-$username = $_POST['USERNAME'];
-$password = $_POST['PASSWORD'];
 $date = date("Y-m-d\TH:i:sP");
-$setupURL = $_POST['PUNCHOUT_LOGIN_URL'];
 $hook = "https://www.lan2k.org/punchout/cxml/hook.php";
+$inputXML = NULL;
+$replaceHook = true;
 
-$xmldata = <<<EOT
+if (!empty($_POST['inputXML'])) {
+    $replaceHook = isset($_POST['replaceHook']);
+    $inputXML = $_POST['inputXML'];
+} else {
+    $replaceHook = true;
+    $username = $_POST['USERNAME'];
+    $password = $_POST['PASSWORD'];
+    $setupURL = $_POST['PUNCHOUT_LOGIN_URL'];
+    $inputXML = <<<EOT
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.1.007/cXML.dtd">
 <cXML version="1.1.007" xml:lang="en-US" payloadID="$payload" timestamp="$date">
@@ -34,7 +41,7 @@ $xmldata = <<<EOT
             <BuyerCookie>$payload</BuyerCookie>
             <Extrinsic name="User">TestUser</Extrinsic>
             <BrowserFormPost>
-                <URL>$hook</URL>
+                <URL>HOOK PLACEHOLDER</URL>
             </BrowserFormPost>
             <Contact>
                 <Name xml:lang="en-US">First Lastname</Name>
@@ -47,33 +54,51 @@ $xmldata = <<<EOT
     </Request>
 </cXML>
 EOT;
+}
+?><?php //Trick to fool syntax higlighting
 
+$inputDoc = simplexml_load_string($inputXML);
+$setupURL = $inputDoc->Request->PunchOutSetupRequest->SupplierSetup->URL[0];
+if ($replaceHook) {
+    $inputDoc->Request->PunchOutSetupRequest->BrowserFormPost->URL[0] = $hook;
+    $inputXML = $inputDoc->asXML();
+}
 
 $ch = curl_init($setupURL);
 curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 0);
 curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
 curl_setopt($ch, CURLOPT_POST, 1);
 curl_setopt($ch, CURLOPT_HTTPHEADER, array('Content-Type: text/xml'));
-curl_setopt($ch, CURLOPT_POSTFIELDS, $xmldata);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $inputXML);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-$output = curl_exec($ch);
+$outputXML = curl_exec($ch);
+$outputDoc = simplexml_load_string($outputXML);
 $result = curl_getinfo($ch);
-$xmldoc = simplexml_load_string($output);
 curl_close($ch);
 
 $ok = false;
 $url = "";
 if ($result['http_code'] == 200) {
    $ok = true;
-   $url = $xmldoc->Response[0]->PunchOutSetupResponse[0]->StartPage[0]->URL[0];
+   $url = $outputDoc->Response[0]->PunchOutSetupResponse[0]->StartPage[0]->URL[0];
 }
 
 $dom = new DOMDocument();
-$dom->loadXML($output);
+$dom->loadXML($outputXML);
 $dom->preserveWhiteSpace = false;
 $dom->formatOutput = true;
-$cxml = $dom->saveXML();
-$cxml = htmlentities($cxml);
+$outputXML = $dom->saveXML();
+$outputXML = htmlentities($outputXML);
+unset($dom);
+
+$dom = new DOMDocument();
+$dom->loadXML($inputXML);
+$dom->preserveWhiteSpace = false;
+$dom->formatOutput = true;
+$dom->normalizeDocument();
+$inputXML = $dom->saveXML();
+$inputXML = htmlentities($inputXML);
+unset($dom);
 
 ?><!doctype html>
 <html lang="en">
@@ -93,11 +118,17 @@ $cxml = htmlentities($cxml);
 
   <hr />
 
-  <h2>XML:</h2>
-  <pre class="sh_xml"><?= $cxml ?></pre>
+  <h2>XML Response:</h2>
+  <pre class="sh_xml"><?= $outputXML ?></pre>
+
+  <h2>XML Input:</h2>
+  <pre class="sh_xml"><?= $inputXML ?></pre>
 
   <h2>cURL:</h2>
-  <pre><?= print_r($result, true) ?></pre>
+  <pre><?= htmlentities(print_r($result, true)) ?></pre>
+
+  <h2>POST:</h2>
+  <pre><?= htmlentities(print_r($_POST, true)) ?></pre>
 
 
  </body>

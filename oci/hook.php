@@ -44,3 +44,4 @@ foreach(array_values($keys) as $i) {
 <h2>SESSION </h2> <pre><? print_r($_SESSION); ?></pre>
 <h2>COOKIE  </h2> <pre><? print_r($_COOKIE);  ?></pre>
 <h2>SERVER  </h2> <pre><? print_r($_SERVER);  ?></pre>
+

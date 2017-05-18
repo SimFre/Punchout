@@ -10,12 +10,29 @@
 
  <body onload="sh_highlightDocument();">
   <h2>Punch Out Test</h2>
+  <hr />
 
   <form name="pu" method="post" action="punch.php">
-   <br />Punchout URL:<br /><input type="text" name="PUNCHOUT_LOGIN_URL" style="width: 400px;" value="https://webshop-test.fishersci.com/insight2_ie/cxmlAuthentication.do" />
-   <br />Username:    <br /><input type="text" name="USERNAME" size="25" value="" />
-   <br />Password:    <br /><input type="text" name="PASSWORD" size="25" value="" />
-                      <br /><input type="submit" value="Go" />
+   <p>
+    <br />Punchout URL:<br /><input type="text" name="PUNCHOUT_LOGIN_URL" style="width: 400px;" value="https://webshop-test.fishersci.com/insight2_ie/cxmlAuthentication.do" />
+    <br />Username:    <br /><input type="text" name="USERNAME" size="25" value="" />
+    <br />Password:    <br /><input type="text" name="PASSWORD" size="25" value="" />
+                       <br /><input type="submit" value="Go" />
+   </p>
+
+   <h2>-- OR --</h2>
+
+   <p>
+    Input cXML (optional):<br />
+    <textarea name="inputXML" style="width: 600px; height: 400px;"></textarea>
+    <br />
+    <label>
+     <input type="checkbox" value="true" name="replaceHook" checked="checked" />
+     Replace Hook URL
+    </label>
+   <br /><input type="submit" value="Go" />
+   </p>
+
   </form>
  </body>
 </html>
